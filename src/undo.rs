@@ -1,6 +1,4 @@
-use std::result::Result;
-
-use failure::Error;
+use anyhow::Result;
 use serde_derive::{Deserialize, Serialize};
 #[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Scalar {
@@ -31,7 +29,7 @@ pub struct Data {
 }
 
 impl Data {
-    pub fn from_str(data: &str) -> Result<Data, Error> {
+    pub fn from_str(data: &str) -> Result<Data> {
         let d: Data = serde_json::from_str(data)?;
         Ok(d)
     }

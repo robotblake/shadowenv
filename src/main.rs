@@ -12,8 +12,9 @@ mod shadowenv;
 mod trust;
 mod undo;
 
+use anyhow::{bail, Result};
+
 use crate::shadowenv::Shadowenv;
-use failure::format_err;
 use std::env;
 use std::path::PathBuf;
 use std::process;
@@ -98,11 +99,11 @@ fn determine_shellpid_or_crash(arg: Option<&str>) -> u32 {
     }
 }
 
-fn unsafe_getppid() -> Result<u32, failure::Error> {
+fn unsafe_getppid() -> Result<u32> {
     let ppid;
     unsafe { ppid = libc::getppid() }
     if ppid < 1 {
-        return Err(format_err!("somehow failed to get ppid"));
+        bail!("somwhow failed to get ppid");
     }
     Ok(ppid as u32)
 }

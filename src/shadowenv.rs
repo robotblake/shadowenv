@@ -1,4 +1,4 @@
-use failure::Error;
+use anyhow::Result;
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::env;
@@ -102,12 +102,12 @@ impl Shadowenv {
         data
     }
 
-    fn format_shadowenv_data(&self) -> Result<String, Error> {
+    fn format_shadowenv_data(&self) -> Result<String> {
         let d = self.shadowenv_data();
         Ok(format!("{:016x}:", self.target_hash) + &serde_json::to_string(&d)?)
     }
 
-    pub fn exports(&self) -> Result<HashMap<String, Option<String>>, Error> {
+    pub fn exports(&self) -> Result<HashMap<String, Option<String>>> {
         let mut changes: HashMap<String, Option<String>> = HashMap::new();
         let varnames = self.all_relevant_varnames();
 

@@ -1,8 +1,8 @@
 use crate::loader;
 
+use anyhow::Result;
 use ed25519_dalek::Keypair;
 use ed25519_dalek::{Signature, Signer};
-use failure::{Error, Fail};
 use rand::rngs::OsRng;
 use std::env;
 use std::ffi::OsString;
@@ -10,21 +10,19 @@ use std::fs::OpenOptions;
 use std::fs::{self, File};
 use std::io::{prelude::*, ErrorKind};
 use std::path::{Path, PathBuf};
+use thiserror::Error;
 
-#[derive(Fail, Debug)]
-#[fail(display = "no shadowenv found")]
+#[derive(Error, Debug)]
+#[error("no shadowenv found")]
 pub struct NoShadowenv;
 
-#[derive(Fail, Debug)]
-#[fail(
-    display = "directory: '{}' contains untrusted shadowenv program: `shadowenv help trust` to learn more.",
-    not_trusted_dir_path
-)]
+#[derive(Error, Debug)]
+#[error("directory: '{not_trusted_dir_path}' contains untrusted shadowenv program: `shadowenv help trust` to learn more.")]
 pub struct NotTrusted {
     pub not_trusted_dir_path: String,
 }
 
-pub fn is_dir_trusted(dir: &PathBuf) -> Result<bool, Error> {
+pub fn is_dir_trusted(dir: &PathBuf) -> Result<bool> {
     let signer = load_or_generate_signer().unwrap();
 
     let root = match loader::find_root(&dir.to_path_buf(), loader::DEFAULT_RELATIVE_COMPONENT)? {
@@ -39,7 +37,7 @@ pub fn is_dir_trusted(dir: &PathBuf) -> Result<bool, Error> {
     let msg = d.as_bytes();
 
     let path = trust_file(&root, fingerprint);
-    let r_o_bytes: Result<Option<Vec<u8>>, Error> = match fs::read(path) {
+    let r_o_bytes: Result<Option<Vec<u8>>> = match fs::read(path) {
         Ok(bytes) => Ok(Some(bytes)),
         Err(ref e) if e.kind() == ErrorKind::NotFound => Ok(None),
         Err(e) => Err(e.into()),
@@ -54,10 +52,10 @@ pub fn is_dir_trusted(dir: &PathBuf) -> Result<bool, Error> {
     }
 }
 
-fn load_or_generate_signer() -> Result<Keypair, Error> {
+fn load_or_generate_signer() -> Result<Keypair> {
     let path = format!("{}/.config/shadowenv/trust-key-v2", env::var("HOME")?);
 
-    let r_o_bytes: Result<Option<Vec<u8>>, Error> = match fs::read(Path::new(&path)) {
+    let r_o_bytes: Result<Option<Vec<u8>>> = match fs::read(Path::new(&path)) {
         Ok(bytes) => Ok(Some(bytes)),
         Err(ref e) if e.kind() == ErrorKind::NotFound => Ok(None),
         Err(e) => Err(e.into()),
@@ -85,7 +83,7 @@ fn load_or_generate_signer() -> Result<Keypair, Error> {
 }
 
 /// Trust this directory: create a new signature file.
-pub fn run() -> Result<(), Error> {
+pub fn run() -> Result<()> {
     let signer = load_or_generate_signer().unwrap();
 
     let root = match loader::find_root(&env::current_dir()?, loader::DEFAULT_RELATIVE_COMPONENT)? {
@@ -125,10 +123,10 @@ fn from_vec(vec: Vec<u8>) -> [u8; 64] {
     array
 }
 
-fn write_gitignore(root: PathBuf) -> Result<(), Error> {
+fn write_gitignore(root: PathBuf) -> Result<()> {
     let path = root.join(".gitignore");
 
-    let r: Result<String, Error> = match fs::read_to_string(&path) {
+    let r: Result<String> = match fs::read_to_string(&path) {
         Ok(s) => Ok(s),
         Err(ref e) if e.kind() == ErrorKind::NotFound => Ok("".to_string()),
         Err(e) => Err(e.into()),

@@ -1,10 +1,10 @@
 use crate::hook;
-use failure::Error;
+use anyhow::Result;
 use std::path::PathBuf;
 use std::vec::Vec;
 
 /// Execute the provided command (argv) after loading the environment from the current directory
-pub fn run(pathbuf: PathBuf, shadowenv_data: String, argv: Vec<&str>) -> Result<(), Error> {
+pub fn run(pathbuf: PathBuf, shadowenv_data: String, argv: Vec<&str>) -> Result<()> {
     if let Some((shadowenv, _)) = hook::load_env(pathbuf, shadowenv_data, true)? {
         hook::mutate_own_env(&shadowenv)?;
     }

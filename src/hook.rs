@@ -5,17 +5,16 @@ use crate::output;
 use crate::shadowenv::Shadowenv;
 use crate::trust;
 use crate::undo;
+use anyhow::Result;
 use serde_derive::Serialize;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
-use std::result::Result;
 use std::str::FromStr;
 
 use crate::lang::ShadowLang;
-use failure::Error;
 use shell_escape as shell;
 
 pub enum VariableOutputMode {
@@ -48,7 +47,7 @@ pub fn run(
     shadowenv_data: String,
     mode: VariableOutputMode,
     force: bool,
-) -> Result<(), Error> {
+) -> Result<()> {
     match load_env(pathbuf, shadowenv_data, force)? {
         Some((shadowenv, activation)) => {
             apply_env(&shadowenv, mode, activation)?;
@@ -62,7 +61,7 @@ pub fn load_env(
     pathbuf: PathBuf,
     shadowenv_data: String,
     force: bool,
-) -> Result<Option<(Shadowenv, bool)>, Error> {
+) -> Result<Option<(Shadowenv, bool)>> {
     let mut parts = shadowenv_data.splitn(2, ":");
     let prev_hash = parts.next();
     let json_data = parts.next().unwrap_or("{}");
@@ -108,7 +107,7 @@ pub fn load_env(
 }
 
 /// Load a Source from the current dir, ensuring that it is trusted.
-fn load_trusted_source(pathbuf: PathBuf) -> Result<Option<Source>, Error> {
+fn load_trusted_source(pathbuf: PathBuf) -> Result<Option<Source>> {
     if let Some(root) = loader::find_root(&pathbuf, loader::DEFAULT_RELATIVE_COMPONENT)? {
         if !trust::is_dir_trusted(&root)? {
             return Err(trust::NotTrusted {
@@ -121,7 +120,7 @@ fn load_trusted_source(pathbuf: PathBuf) -> Result<Option<Source>, Error> {
     Ok(None)
 }
 
-pub fn mutate_own_env(shadowenv: &Shadowenv) -> Result<(), Error> {
+pub fn mutate_own_env(shadowenv: &Shadowenv) -> Result<()> {
     for (k, v) in shadowenv.exports()? {
         match v {
             Some(s) => env::set_var(k, &s),
@@ -132,11 +131,7 @@ pub fn mutate_own_env(shadowenv: &Shadowenv) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn apply_env(
-    shadowenv: &Shadowenv,
-    mode: VariableOutputMode,
-    activation: bool,
-) -> Result<(), Error> {
+pub fn apply_env(shadowenv: &Shadowenv, mode: VariableOutputMode, activation: bool) -> Result<()> {
     match mode {
         VariableOutputMode::PosixMode => {
             for (k, v) in shadowenv.exports()? {

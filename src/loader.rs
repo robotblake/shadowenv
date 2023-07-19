@@ -1,16 +1,16 @@
+use anyhow::Result;
+
 use crate::hash::Source;
 
 use std::fs;
 use std::io::ErrorKind;
 use std::path::PathBuf;
 
-use failure::Error;
-
 pub const DEFAULT_RELATIVE_COMPONENT: &str = ".shadowenv.d";
 
 /// Search upwards the filesystem branch starting with `at` and then its ancestors looking
 /// for a file or directory named `relative_component`.
-pub fn find_root(at: &PathBuf, relative_component: &str) -> Result<Option<PathBuf>, Error> {
+pub fn find_root(at: &PathBuf, relative_component: &str) -> Result<Option<PathBuf>> {
     for curr in at.ancestors() {
         let dirpath = curr.join(relative_component);
 
@@ -27,7 +27,7 @@ pub fn find_root(at: &PathBuf, relative_component: &str) -> Result<Option<PathBu
 /// `SourceFiles` inside a `Source` struct.
 ///
 /// Note that this function assumes that the dirpath is trusted.
-pub fn load(dirpath: PathBuf) -> Result<Option<Source>, Error> {
+pub fn load(dirpath: PathBuf) -> Result<Option<Source>> {
     let mut source = Source::new(dirpath.parent().unwrap().to_string_lossy().to_string());
 
     for entry in fs::read_dir(dirpath)?.flatten() {

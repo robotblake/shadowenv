@@ -1,12 +1,12 @@
+use anyhow::Result;
 use blake2::digest::{Input, VariableOutput};
 use blake2::VarBlake2b;
-use failure::{Error, Fail};
 use std::cmp::Ord;
 use std::cmp::Ordering;
 use std::convert::TryInto;
-use std::result::Result;
 use std::str::FromStr;
 use std::u64;
+use thiserror::Error;
 
 const FILE_SEPARATOR: &str = "\x1C";
 const GROUP_SEPARATOR: &str = "\x1D";
@@ -46,8 +46,8 @@ pub struct Hash {
     pub hash: u64,
 }
 
-#[derive(Fail, Debug)]
-#[fail(display = "wrong input size")]
+#[derive(Error, Debug)]
+#[error("wrong input size")]
 struct WrongInputSize;
 
 impl Source {
@@ -59,7 +59,7 @@ impl Source {
         self.files.push(SourceFile { name, contents })
     }
 
-    pub fn hash(&self) -> Result<u64, Error> {
+    pub fn hash(&self) -> Result<u64> {
         if self.files.is_empty() {
             return Ok(0);
         }
@@ -81,9 +81,9 @@ impl Source {
 }
 
 impl FromStr for Hash {
-    type Err = Error;
+    type Err = anyhow::Error;
 
-    fn from_str(key: &str) -> Result<Self, Error> {
+    fn from_str(key: &str) -> Result<Self> {
         if key.len() != 16 {
             return Err(WrongInputSize {}.into());
         }

@@ -2,8 +2,9 @@ use crate::features::Feature;
 use crate::loader;
 use crate::trust;
 
+use anyhow::anyhow;
+use anyhow::{Error, Result};
 use atty::{is, Stream};
-use failure::{format_err, Error};
 use regex::Regex;
 use std::collections::HashSet;
 use std::env;
@@ -70,15 +71,14 @@ fn backticks_to_bright_green(err: Error) -> String {
         .to_string()
 }
 
-fn check_and_trigger_cooldown(err: &Error, shellpid: u32) -> Result<bool, Error> {
+fn check_and_trigger_cooldown(err: &Error, shellpid: u32) -> Result<bool> {
     // if no .shadowenv.d, then Err(_) just means no cooldown: always display error.
     let root = loader::find_root(&env::current_dir()?, loader::DEFAULT_RELATIVE_COMPONENT)?
-        .ok_or_else(|| format_err!("no .shadowenv.d"))?;
+        .ok_or_else(|| anyhow!("no .shadowenv.d"))?;
 
     let _ = clean_up_stale_errors(&root, Duration::new(300, 0));
 
-    let errindex =
-        cooldown_index(err).ok_or_else(|| format_err!("error not subject to cooldown"))?;
+    let errindex = cooldown_index(err).ok_or_else(|| anyhow!("error not subject to cooldown"))?;
 
     let errfilepath = err_file(&root, errindex, shellpid)?;
 
@@ -98,7 +98,7 @@ fn cooldown_index(err: &Error) -> Option<u32> {
     }
 }
 
-fn clean_up_stale_errors(root: &PathBuf, timeout: Duration) -> Result<(), Error> {
+fn clean_up_stale_errors(root: &PathBuf, timeout: Duration) -> Result<()> {
     let now = SystemTime::now();
     if root.is_dir() {
         for entry in fs::read_dir(root)? {
@@ -118,12 +118,12 @@ fn clean_up_stale_errors(root: &PathBuf, timeout: Duration) -> Result<(), Error>
     Ok(())
 }
 
-fn err_file(root: &PathBuf, errindex: u32, shellpid: u32) -> Result<PathBuf, Error> {
+fn err_file(root: &PathBuf, errindex: u32, shellpid: u32) -> Result<PathBuf> {
     Ok(root.join(format!(".error-{}-{}", errindex, shellpid)))
 }
 
 // return value of Ok(true) indicates it's on cooldown and should be suppressed.
-fn check_cooldown_sentinel(path: &PathBuf, timeout: Duration) -> Result<bool, Error> {
+fn check_cooldown_sentinel(path: &PathBuf, timeout: Duration) -> Result<bool> {
     let metadata = path.metadata()?;
     let mtime = metadata.modified()?;
 
@@ -133,7 +133,7 @@ fn check_cooldown_sentinel(path: &PathBuf, timeout: Duration) -> Result<bool, Er
     Ok(elapsed < timeout)
 }
 
-fn create_cooldown_sentinel(path: PathBuf) -> Result<(), Error> {
+fn create_cooldown_sentinel(path: PathBuf) -> Result<()> {
     let _ = OpenOptions::new()
         .truncate(true)
         .write(true)

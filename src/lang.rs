@@ -1,9 +1,9 @@
 use crate::hash::Source;
 use crate::shadowenv::Shadowenv;
+use anyhow::Result;
 use ketos_derive::{ForeignValue, FromValueRef};
 
-use failure::Fail;
-use ketos::{Context, Error, FromValueRef, Name, Value};
+use ketos::{Context, Error as KetosError, FromValueRef, Name, Value};
 use std::cell::{Ref, RefCell};
 use std::env;
 use std::fs;
@@ -13,8 +13,8 @@ use std::rc::Rc;
 
 pub struct ShadowLang {}
 
-#[derive(Fail, Debug)]
-#[fail(display = "error while evaluating shadowlisp")]
+#[derive(thiserror::Error, Debug)]
+#[error("error while evaluating shadowlisp")]
 pub struct ShadowlispError;
 
 macro_rules! ketos_fn2 {
@@ -69,7 +69,7 @@ fn get_value(ctx: &Context, shadowenv_name: Name) -> Value {
         .expect("bug: shadowenv not defined")
 }
 
-fn path_concat(vals: &mut [Value]) -> Result<String, Error> {
+fn path_concat(vals: &mut [Value]) -> Result<String, KetosError> {
     let res = vals.iter().fold(
         PathBuf::new(),
         |acc, v| acc.join(<&str as FromValueRef>::from_value_ref(v).unwrap()), // TODO(burke): don't unwrap
@@ -79,14 +79,14 @@ fn path_concat(vals: &mut [Value]) -> Result<String, Error> {
 }
 
 impl ShadowLang {
-    pub fn run_program(shadowenv: Shadowenv, source: Source) -> Result<Shadowenv, Error> {
+    pub fn run_program(shadowenv: Shadowenv, source: Source) -> Result<Shadowenv, KetosError> {
         let wrapper = Rc::new(ShadowenvWrapper::new(shadowenv));
         Self::run(&wrapper, source)?;
         let result = Rc::try_unwrap(wrapper).unwrap().into_inner();
         Ok(result)
     }
 
-    fn run(rc_wrapper: &Rc<ShadowenvWrapper>, source: Source) -> Result<(), Error> {
+    fn run(rc_wrapper: &Rc<ShadowenvWrapper>, source: Source) -> Result<(), KetosError> {
         let mut restrictions = ketos::RestrictConfig::strict();
         // "Maximum size of value stack, in values"
         // This also puts a cap on the size of string literals in a single function invocation.
